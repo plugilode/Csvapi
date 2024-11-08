@@ -3,11 +3,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.test-endpoint').forEach(button => {
         button.addEventListener('click', async function() {
             const url = this.dataset.url;
+            const queryParams = this.closest('.endpoint').querySelector('.query-params').value;
             const responseContainer = this.closest('.endpoint-card').querySelector('.response-container');
             const responseData = responseContainer.querySelector('.response-data');
             
             try {
-                const response = await fetch(url);
+                const fullUrl = queryParams ? `${url}${queryParams}` : url;
+                const response = await fetch(fullUrl);
                 const data = await response.json();
                 responseContainer.style.display = 'block';
                 responseData.textContent = JSON.stringify(data, null, 2);
