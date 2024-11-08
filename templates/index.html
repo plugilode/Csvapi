@@ -4,13 +4,15 @@
 <div class="terminal-container">
     <h1 class="terminal-text">CSV to REST API Converter</h1>
     
-    <div class="upload-section mt-4">
+    <div id="upload-section" class="upload-section mt-4" style="display: none;">
         <h3 class="terminal-text">Upload CSV File</h3>
-        <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+        <form id="upload-form">
             <div class="mb-3">
-                <input type="file" class="form-control" name="file" accept=".csv">
+                <input type="file" class="form-control" name="file" accept=".csv" required>
             </div>
             <button type="submit" class="btn btn-primary">Upload</button>
+            <div id="upload-error" class="alert alert-danger mt-3" style="display: none;"></div>
+            <div id="upload-success" class="alert alert-success mt-3" style="display: none;"></div>
         </form>
     </div>
 
@@ -44,4 +46,53 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorDiv = document.getElementById('upload-error');
+    const successDiv = document.getElementById('upload-success');
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+
+    const formData = new FormData(e.target);
+    const fileInput = e.target.querySelector('input[type="file"]');
+    
+    if (!fileInput.files[0]) {
+        errorDiv.textContent = 'Please select a file to upload';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    try {
+        const response = await fetchWithAuth('/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            successDiv.textContent = 'File uploaded successfully';
+            successDiv.style.display = 'block';
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else if (response.status === 401) {
+            errorDiv.textContent = 'Please log in to upload files';
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                window.location.href = '/auth/login';
+            }, 1500);
+        } else {
+            const data = await response.json();
+            errorDiv.textContent = data.error || 'An error occurred while uploading the file';
+            errorDiv.style.display = 'block';
+        }
+    } catch (error) {
+        errorDiv.textContent = 'An error occurred while uploading the file';
+        errorDiv.style.display = 'block';
+    }
+});
+</script>
 {% endblock %}
