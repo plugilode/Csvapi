@@ -1,6 +1,6 @@
 from flask import jsonify, request
 from models import DataRecord
-from sqlalchemy import desc
+from sqlalchemy import desc, and_, or_, cast, String, Float
 import re
 
 ALLOWED_EXTENSIONS = {'csv'}
@@ -8,22 +8,55 @@ ALLOWED_EXTENSIONS = {'csv'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def get_filter_operator(operator, value):
+    operators = {
+        'eq': lambda field: field.astext == str(value),
+        'gt': lambda field: cast(field.astext, Float) > float(value),
+        'lt': lambda field: cast(field.astext, Float) < float(value),
+        'gte': lambda field: cast(field.astext, Float) >= float(value),
+        'lte': lambda field: cast(field.astext, Float) <= float(value),
+        'contains': lambda field: field.astext.ilike(f'%{value}%'),
+        'startswith': lambda field: field.astext.ilike(f'{value}%'),
+        'endswith': lambda field: field.astext.ilike(f'%{value}'),
+    }
+    return operators.get(operator, operators['eq'])
+
 def process_query_parameters(query, dataset_records, dataset_id):
     # Pagination parameters
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     
-    # Sorting parameters
-    sort_by = request.args.get('sort_by')
-    sort_order = request.args.get('sort_order', 'asc')
+    # Multiple sort fields support
+    sort_fields = request.args.getlist('sort_by')
+    sort_orders = request.args.getlist('sort_order')
+    
+    # Field selection
+    fields = request.args.getlist('fields')
     
     # Search parameter
     search = request.args.get('search')
     
-    # Apply filtering based on column values
+    # Apply advanced filtering
+    filter_conditions = []
     for key, value in request.args.items():
-        if key not in ['page', 'per_page', 'sort_by', 'sort_order', 'search']:
-            query = query.filter(DataRecord.data[key].astext == value)
+        # Skip special parameters
+        if key in ['page', 'per_page', 'sort_by', 'sort_order', 'search', 'fields']:
+            continue
+            
+        # Handle advanced operators (e.g., column__gt=5, column__contains=text)
+        if '__' in key:
+            field, operator = key.split('__')
+            try:
+                filter_op = get_filter_operator(operator, value)
+                filter_conditions.append(filter_op(DataRecord.data[field]))
+            except (ValueError, TypeError):
+                continue
+        else:
+            # Default exact match
+            filter_conditions.append(DataRecord.data[key].astext == value)
+    
+    if filter_conditions:
+        query = query.filter(and_(*filter_conditions))
     
     # Apply search across all columns if search parameter is provided
     if search:
@@ -34,25 +67,39 @@ def process_query_parameters(query, dataset_records, dataset_id):
                 search_conditions.append(
                     DataRecord.data[column].astext.ilike(f'%{search}%')
                 )
-            from sqlalchemy import or_
             query = query.filter(or_(*search_conditions))
     
-    # Apply sorting if sort_by parameter is provided
-    if sort_by:
-        sort_expr = DataRecord.data[sort_by].astext
-        if sort_order.lower() == 'desc':
-            sort_expr = desc(sort_expr)
-        query = query.order_by(sort_expr)
+    # Apply multiple sorting
+    if sort_fields:
+        sort_expressions = []
+        for idx, sort_field in enumerate(sort_fields):
+            sort_order = sort_orders[idx] if idx < len(sort_orders) else 'asc'
+            sort_expr = DataRecord.data[sort_field].astext
+            if sort_order.lower() == 'desc':
+                sort_expr = desc(sort_expr)
+            sort_expressions.append(sort_expr)
+        if sort_expressions:
+            query = query.order_by(*sort_expressions)
     
     # Apply pagination
     paginated_query = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    # Prepare response data with field selection
+    data = []
+    for record in paginated_query.items:
+        if fields:
+            # Only include requested fields
+            filtered_data = {field: record.data.get(field) for field in fields if field in record.data}
+            data.append(filtered_data)
+        else:
+            data.append(record.data)
     
     # Prepare response metadata
     total_pages = paginated_query.pages
     total_records = paginated_query.total
     
     return {
-        'data': [record.data for record in paginated_query.items],
+        'data': data,
         'metadata': {
             'page': page,
             'per_page': per_page,

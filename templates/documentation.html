@@ -31,13 +31,13 @@
                         </tr>
                         <tr>
                             <td>sort_by</td>
-                            <td>Column name to sort by</td>
-                            <td><code>?sort_by=name</code></td>
+                            <td>Column name(s) to sort by (can be used multiple times)</td>
+                            <td><code>?sort_by=name&sort_by=age</code></td>
                         </tr>
                         <tr>
                             <td>sort_order</td>
-                            <td>Sort direction (asc or desc)</td>
-                            <td><code>?sort_order=desc</code></td>
+                            <td>Sort direction for each sort_by field (asc or desc)</td>
+                            <td><code>?sort_order=desc&sort_order=asc</code></td>
                         </tr>
                         <tr>
                             <td>search</td>
@@ -45,8 +45,48 @@
                             <td><code>?search=john</code></td>
                         </tr>
                         <tr>
-                            <td>[column_name]</td>
-                            <td>Filter by column value</td>
+                            <td>fields</td>
+                            <td>Select specific fields to include in response (can be used multiple times)</td>
+                            <td><code>?fields=name&fields=age</code></td>
+                        </tr>
+                        <tr>
+                            <td>[column]__gt</td>
+                            <td>Greater than filter for numeric fields</td>
+                            <td><code>?age__gt=25</code></td>
+                        </tr>
+                        <tr>
+                            <td>[column]__lt</td>
+                            <td>Less than filter for numeric fields</td>
+                            <td><code>?price__lt=100</code></td>
+                        </tr>
+                        <tr>
+                            <td>[column]__gte</td>
+                            <td>Greater than or equal filter</td>
+                            <td><code>?age__gte=18</code></td>
+                        </tr>
+                        <tr>
+                            <td>[column]__lte</td>
+                            <td>Less than or equal filter</td>
+                            <td><code>?price__lte=99.99</code></td>
+                        </tr>
+                        <tr>
+                            <td>[column]__contains</td>
+                            <td>Contains text filter (case-insensitive)</td>
+                            <td><code>?name__contains=john</code></td>
+                        </tr>
+                        <tr>
+                            <td>[column]__startswith</td>
+                            <td>Starts with text filter</td>
+                            <td><code>?name__startswith=j</code></td>
+                        </tr>
+                        <tr>
+                            <td>[column]__endswith</td>
+                            <td>Ends with text filter</td>
+                            <td><code>?email__endswith=.com</code></td>
+                        </tr>
+                        <tr>
+                            <td>[column]</td>
+                            <td>Exact match filter</td>
                             <td><code>?city=London</code></td>
                         </tr>
                     </tbody>
@@ -62,7 +102,7 @@
                 <h5 class="terminal-text">Get All Records</h5>
                 <pre><code class="language-http">GET /api/v1/{{ dataset.id }}/data</code></pre>
                 <div class="mb-3">
-                    <input type="text" class="form-control query-params" placeholder="Query parameters (e.g., ?page=1&per_page=10)">
+                    <input type="text" class="form-control query-params" placeholder="Query parameters (e.g., ?page=1&per_page=10&sort_by=name&fields=name,age)">
                 </div>
                 <button class="btn btn-sm btn-primary test-endpoint" 
                         data-url="/api/v1/{{ dataset.id }}/data">
