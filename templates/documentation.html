@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="terminal-container">
+    <h1 class="terminal-text">API Documentation</h1>
+
+    <div class="documentation-section mt-4">
+        <h3 class="terminal-text">Available Endpoints</h3>
+
+        {% for dataset in datasets %}
+        <div class="endpoint-card mt-4">
+            <h4 class="terminal-text">Dataset: {{ dataset.name }}</h4>
+            
+            <div class="endpoint mt-3">
+                <h5 class="terminal-text">Get All Records</h5>
+                <pre><code class="language-http">GET /api/v1/{{ dataset.id }}/data</code></pre>
+                <button class="btn btn-sm btn-primary test-endpoint" 
+                        data-url="/api/v1/{{ dataset.id }}/data">
+                    Test Endpoint
+                </button>
+            </div>
+
+            <div class="endpoint mt-3">
+                <h5 class="terminal-text">Get Single Record</h5>
+                <pre><code class="language-http">GET /api/v1/{{ dataset.id }}/data/:record_id</code></pre>
+                <div class="input-group mb-3">
+                    <input type="number" class="form-control record-id" placeholder="Record ID">
+                    <button class="btn btn-primary test-single-record" 
+                            data-url="/api/v1/{{ dataset.id }}/data/">
+                        Test Endpoint
+                    </button>
+                </div>
+            </div>
+
+            <div class="response-container mt-3" style="display: none;">
+                <h5 class="terminal-text">Response:</h5>
+                <pre><code class="language-json response-data"></code></pre>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
