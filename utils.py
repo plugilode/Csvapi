@@ -1,5 +1,6 @@
 from flask import jsonify, request
-from models import DataRecord
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import DataRecord, User
 from sqlalchemy import desc, and_, or_, cast, String, Float
 import re
 
@@ -110,14 +111,28 @@ def process_query_parameters(query, dataset_records, dataset_id):
 
 def create_api_endpoints(app, dataset):
     @app.route(f'/api/v1/{dataset.id}/data', methods=['GET'])
+    @jwt_required()
     def get_dataset_data(dataset_id=dataset.id):
+        current_user_id = get_jwt_identity()
+        dataset = Dataset.query.get_or_404(dataset_id)
+        
+        if dataset.owner_id != current_user_id:
+            return jsonify({"error": "Unauthorized access"}), 403
+            
         dataset_records = DataRecord.query.filter_by(dataset_id=dataset_id)
         base_query = DataRecord.query.filter_by(dataset_id=dataset_id)
         result = process_query_parameters(base_query, dataset_records, dataset_id)
         return jsonify(result)
 
     @app.route(f'/api/v1/{dataset.id}/data/<int:record_id>', methods=['GET'])
+    @jwt_required()
     def get_record(dataset_id=dataset.id, record_id=None):
+        current_user_id = get_jwt_identity()
+        dataset = Dataset.query.get_or_404(dataset_id)
+        
+        if dataset.owner_id != current_user_id:
+            return jsonify({"error": "Unauthorized access"}), 403
+            
         record = DataRecord.query.filter_by(dataset_id=dataset_id, id=record_id).first_or_404()
         return jsonify(record.data)
 

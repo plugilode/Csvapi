@@ -1,10 +1,15 @@
 from flask import render_template, request, jsonify, flash, redirect, url_for
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 import pandas as pd
 from app import app, db
-from models import Dataset, DataRecord
+from models import Dataset, DataRecord, User
 from utils import allowed_file, create_api_endpoints
+from auth import auth_bp
 import os
+
+# Register the auth blueprint
+app.register_blueprint(auth_bp)
 
 @app.route('/')
 def index():
@@ -12,7 +17,10 @@ def index():
     return render_template('index.html', datasets=datasets)
 
 @app.route('/upload', methods=['POST'])
+@jwt_required()
 def upload_file():
+    current_user_id = get_jwt_identity()
+    
     if 'file' not in request.files:
         flash('No file part')
         return redirect(request.url)
@@ -28,7 +36,7 @@ def upload_file():
         df = pd.read_csv(file)
         
         # Create dataset
-        dataset = Dataset(name=filename)
+        dataset = Dataset(name=filename, owner_id=current_user_id)
         db.session.add(dataset)
         db.session.flush()
         
